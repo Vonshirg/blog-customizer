@@ -1,6 +1,7 @@
 import { ArrowButton } from 'components/arrow-button';
 import { Button } from 'components/button';
-import { useState, useRef, useCallback, RefObject, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
+import { useCloseClick } from './hooks/hooks';
 import clsx from 'clsx';
 import { Select } from '../select';
 import { RadioGroup } from '../radio-group';
@@ -22,65 +23,27 @@ type ArticleParamsFormProps = {
 	setArticleState: (props: ArticleStateType) => void;
 };
 
-export const CloseClickHook = ({
-	isOpen,
-	onClose,
-	overlayRef,
-}: {
-	isOpen: boolean;
-	onClose: () => void;
-	overlayRef: RefObject<HTMLDivElement>;
-}) => {
-	const prevIsOpenRef = useRef(isOpen);
-
-	const handleClick = useCallback(
-		(event: MouseEvent) => {
-			const { target } = event;
-			if (target instanceof Node && !overlayRef.current?.contains(target)) {
-				onClose();
-			}
-		},
-		[onClose, overlayRef]
-	);
-
-	useEffect(() => {
-		if (!isOpen && prevIsOpenRef.current === isOpen) return;
-
-		prevIsOpenRef.current = isOpen;
-
-		if (isOpen) {
-			window.addEventListener('mousedown', handleClick);
-		} else {
-			window.removeEventListener('mousedown', handleClick);
-		}
-
-		return () => {
-			window.removeEventListener('mousedown', handleClick);
-		};
-	}, [isOpen, handleClick]);
-};
-
 export const ArticleParamsForm = ({
 	articleState,
 	setArticleState,
 }: ArticleParamsFormProps) => {
-	const [isOpen, setIsOpen] = useState(false);
+	const [isMenuOpen, setIsMenuOpen] = useState(false);
 	const [formState, setFormState] = useState(articleState);
 	const handleOpenForm = useCallback(() => {
-		setIsOpen(!isOpen);
-	}, [isOpen]);
+		setIsMenuOpen(!isMenuOpen);
+	}, [isMenuOpen]);
 
 	const handleFormSubmit = useCallback(
 		(event: React.FormEvent<HTMLFormElement>) => {
 			event.preventDefault();
 			setArticleState(formState);
-			setIsOpen(false);
+			setIsMenuOpen(false);
 		},
 		[formState, setArticleState]
 	);
 
 	const handleFormReset = useCallback(() => {
-		setIsOpen(false);
+		setIsMenuOpen(false);
 		setFormState(defaultArticleState);
 		setArticleState(defaultArticleState);
 	}, [setArticleState]);
@@ -94,30 +57,34 @@ export const ArticleParamsForm = ({
 
 	const rootRef = useRef<HTMLDivElement>(null);
 
-	CloseClickHook({
-		isOpen,
+	useCloseClick({
+		isMenuOpen,
 		overlayRef: rootRef,
-		onClose: () => setIsOpen(false),
+		onClose: () => setIsMenuOpen(false),
 	});
 
 	return (
 		<div ref={rootRef}>
-			<ArrowButton isOpen={isOpen} onClick={handleOpenForm} />
+			<ArrowButton isOpen={isMenuOpen} onClick={handleOpenForm} />
 			<aside
-				className={clsx(styles.container, { [styles.container_open]: isOpen })}>
+				className={clsx(styles.container, {
+					[styles.container_open]: isMenuOpen,
+				})}>
 				<form
 					className={styles.form}
 					onSubmit={handleFormSubmit}
 					onReset={handleFormReset}>
-					<Text as='h2' size={31} weight={800} align='center' uppercase>
+					<Text as='h2' size={31} weight={800} align='left' uppercase>
 						Задайте параметры
 					</Text>
+					<Separator />
 					<Select
 						options={fontFamilyOptions}
 						selected={formState.fontFamilyOption}
 						onChange={(value) => handleChange('fontFamilyOption', value)}
 						title='Выберите шрифт'
 					/>
+					<Separator />
 					<RadioGroup
 						options={fontSizeOptions}
 						selected={formState.fontSizeOption}
@@ -125,6 +92,7 @@ export const ArticleParamsForm = ({
 						onChange={(value) => handleChange('fontSizeOption', value)}
 						title='Выберите размер шрифта'
 					/>
+					<Separator />
 					<Select
 						options={fontColors}
 						selected={formState.fontColor}
@@ -132,12 +100,14 @@ export const ArticleParamsForm = ({
 						title='Выберите цвет шрифта'
 					/>
 					<Separator />
+					<Separator />
 					<Select
 						options={backgroundColors}
 						selected={formState.backgroundColor}
 						onChange={(value) => handleChange('backgroundColor', value)}
 						title='Выберите цвет фона'
 					/>
+					<Separator />
 					<Select
 						options={contentWidthArr}
 						selected={formState.contentWidth}
